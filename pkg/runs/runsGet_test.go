@@ -1281,45 +1281,93 @@ func TestActiveParameterReturnsOk(t *testing.T) {
 
 	// Then ...
 	assert.Nil(t, err)
+	textGotBack := mockConsole.ReadText()
+	assert.Contains(t, textGotBack, runName)
+	want := "submitted-time      name status   result test-name\n"+
+	"2023-05-10 06:00:13 U456 Finished Passed myTestPackage.MyTestName\n"+
+	"\nTotal:1 Passed:1\n"
+	assert.Equal(t, textGotBack, want)
 }
 
-// func TestRunsGetActiveRunsBuildsQueryCorrectly(t *testing.T) {
-// 	// Given ...
-// 	age := ""
-// 	runName := "U456"
-// 	requestor := ""
-// 	result := ""
-// 	shouldGetActive := true
+func TestRunsGetActiveRunsBuildsQueryCorrectly(t *testing.T) {
+	// Given ...
+	age := ""
+	runName := "U456"
+	requestor := ""
+	result := ""
+	shouldGetActive := true
 
-// 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		query := r.URL.Query()
-// 		assert.EqualValues(t, query.Get("from"), "")
-// 		assert.EqualValues(t, query.Get("to"), "")
-// 		assert.EqualValues(t, query.Get("runname"), runName)
-// 		assert.EqualValues(t, query.Get("requestor"), requestor)
-// 		assert.NotContains(t, r.URL.RawQuery, "status="+url.QueryEscape("finished"))
-// 		w.Header().Set("Content-Type", "application/json")
-// 		w.WriteHeader(200)
-// 		w.Write([]byte(`
-// 		 {
-// 			 "pageNumber": 1,
-// 			 "pageSize": 1,
-// 			 "numPages": 1,
-// 			 "amountOfRuns": 0,
-// 			 "runs":[]
-// 		 }`))
-// 	}))
-// 	defer server.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		assert.EqualValues(t, query.Get("from"), "")
+		assert.EqualValues(t, query.Get("to"), "")
+		assert.EqualValues(t, query.Get("runname"), runName)
+		assert.EqualValues(t, query.Get("requestor"), requestor)
+		assert.EqualValues(t, query.Get("status"), "started,ending,generating,building,provstart,running,rundone,up")
+		assert.NotContains(t, r.URL.RawQuery, "status="+url.QueryEscape("finished"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		w.Write([]byte(`
+		 {
+			 "pageNumber": 1,
+			 "pageSize": 1,
+			 "numPages": 1,
+			 "amountOfRuns": 0,
+			 "runs":[]
+		 }`))
+	}))
+	defer server.Close()
 
-// 	outputFormat := "summary"
-// 	mockConsole := utils.NewMockConsole()
+	outputFormat := "summary"
+	mockConsole := utils.NewMockConsole()
 
-// 	apiServerUrl := server.URL
-// 	mockTimeService := utils.NewMockTimeService()
+	apiServerUrl := server.URL
+	mockTimeService := utils.NewMockTimeService()
 
-// 	// When...
-// 	err := GetRuns(runName, age, requestor, result, shouldGetActive, outputFormat, mockTimeService, mockConsole, apiServerUrl)
+	// When...
+	err := GetRuns(runName, age, requestor, result, shouldGetActive, outputFormat, mockTimeService, mockConsole, apiServerUrl)
 
-// 	// Then ...
-// 	assert.Nil(t, err)
-// }
+	// Then ...
+	assert.Nil(t, err)
+}
+
+func TestRunsGetNoActiveFlagBuildsQueryWithoutStatusCorrectly(t *testing.T) {
+	// Given ...
+	age := ""
+	runName := "U456"
+	requestor := ""
+	result := ""
+	shouldGetActive := false
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		assert.EqualValues(t, query.Get("from"), "")
+		assert.EqualValues(t, query.Get("to"), "")
+		assert.EqualValues(t, query.Get("runname"), runName)
+		assert.EqualValues(t, query.Get("requestor"), requestor)
+		assert.EqualValues(t, query.Get("status"), "")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(200)
+		w.Write([]byte(`
+		 {
+			 "pageNumber": 1,
+			 "pageSize": 1,
+			 "numPages": 1,
+			 "amountOfRuns": 0,
+			 "runs":[]
+		 }`))
+	}))
+	defer server.Close()
+
+	outputFormat := "summary"
+	mockConsole := utils.NewMockConsole()
+
+	apiServerUrl := server.URL
+	mockTimeService := utils.NewMockTimeService()
+
+	// When...
+	err := GetRuns(runName, age, requestor, result, shouldGetActive, outputFormat, mockTimeService, mockConsole, apiServerUrl)
+
+	// Then ...
+	assert.Nil(t, err)
+}
